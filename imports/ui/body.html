@@ -1,0 +1,21 @@
+<body>
+  <div class="container">
+    <header>
+      <h1>Twitterbot</h1>
+
+      <form class="new-lead">
+        <input type="text" name="text" placeholder="Type to add new leads" />
+      </form>
+    </header>
+ 
+    <ul>
+      {{#each leads}}
+        {{> lead}}
+      {{/each}}
+    </ul>
+  </div>
+</body>
+ 
+<template name="lead">
+  <li>{{name}}</li>
+</template>

@@ -1,0 +1,11 @@
+{
+  "name": "twitterbot-meteor",
+  "private": true,
+  "scripts": {
+    "start": "meteor run"
+  },
+  "dependencies": {
+    "meteor-node-stubs": "~0.2.0",
+    "twitter": "^1.4.0"
+  }
+}
