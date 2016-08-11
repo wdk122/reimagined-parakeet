@@ -19,25 +19,18 @@ const client = new Twitter({
   access_token_key:    secrets.tokens.accessToken,
   access_token_secret: secrets.tokens.accessSecret
 });
-const handleLeads       = {};
+
 const appOwnerFollowers = {};
 const followedToday     = {};
 
 // recursively gets and filters all the leads
 getLeadPage(-1, 0);
+// TODO: make sure getLeadPage completes before follow200 starts
+// follow200(0);
 
-function trimCurrentFollowers() {
-  for (let k in appOwnerFollowers) {
-    if (handleLeads[k]){
-      delete handleLeads[k];
-    }
-  }
-};
 
 function getLeadPage(cur, index) {
   if(index === secrets.targets.length) {
-    // console.log(handleLeads);
-    console.log(Object.keys(handleLeads).length);
     const getAOF = new Promise((resolve, reject) => {
       const params = { screen_name: secrets.user };
       client.get('followers/ids', params, function(error, data, response) {
@@ -57,19 +50,19 @@ function getLeadPage(cur, index) {
       console.log(Object.keys(appOwnerFollowers).length);
 
       console.log('leads');
-      console.log(Object.keys(handleLeads).length);
+      console.log(leadsCollection().length);
 
       trimCurrentFollowers();
       console.log('after removing app owner followers');
-      console.log(Object.keys(handleLeads).length);
+      console.log(leadsCollection().length);
 
       trimProtectedFeeds();
       console.log('after removing handles w/ protected feeds');
-      console.log(Object.keys(handleLeads).length);
+      console.log(leadsCollection().length);
 
       trimMysteryEggs();
       console.log('after removing eggs with no profile text');
-      console.log(Object.keys(handleLeads).length);      
+      console.log(leadsCollection().length);      
     });
   } else {
     const prom = new Promise((resolve, reject) => {
@@ -81,7 +74,6 @@ function getLeadPage(cur, index) {
         include_user_entities: false
       };
       console.log('starting... ');
-      console.log(Object.keys(handleLeads).length);
       Meteor.setTimeout(() => {
         client.get('followers/list', params, Meteor.bindEnvironment((error, data, response) => {
           if (!error) {
@@ -89,21 +81,13 @@ function getLeadPage(cur, index) {
               if(!Leads.find( { id: user.id } ).fetch().length) {
                 Leads.insert({
                   name: user.name,
-                  createdAt: new Date(), // current time
+                  // createdAt: new Date(), // current time
                   id: user.id,
                   description: user.description,
                   protected: user.protected,
                   profile_image_url: user.profile_image_url,
                 });
               }
-              // TODO: deprecate storage in handleLeads
-              handleLeads[user.id] = {
-                id: user.id,
-                name: user.name,
-                description: user.description,
-                protected: user.protected,
-                profile_image_url: user.profile_image_url,
-              };
             });
             resolve(data.next_cursor);
           } else {
@@ -130,23 +114,26 @@ function getLeadPage(cur, index) {
   }
 };
 
-function trimProtectedFeeds() {
-  for (let k in handleLeads) {
-    if(handleLeads[k].protected) {
-      delete handleLeads[k];
-    };
+function trimCurrentFollowers() {
+  for (let k in appOwnerFollowers) {
+    k = ~~k;
+    Leads.remove( { id: k } );
   }
 };
 
+function trimProtectedFeeds() {
+  Leads.remove( { protected: true } );
+};
+
 function trimMysteryEggs() {
-  for (let k in handleLeads) {
-    if(!handleLeads[k].description) {
-      let foo = handleLeads[k].profile_image_url.split('/')[4];
+  leadsCollection().forEach((lead) => {
+    if(!lead.description) {
+      let foo = lead.profile_image_url.split('/')[4];
       if(foo === 'default_profile_images') {
-        delete handleLeads[k];
-      }
+        Leads.remove( { id: lead.id } );
+      };
     };
-  }
+  })
 };
 
 function follow(id) {
@@ -158,8 +145,11 @@ function follow(id) {
     client.post('friendships/create', params, function(error, data, resp) {
       if (!error) {
         // TODO: assign todays date to autofollowed
-        handleLeads[id].autofollowed = true;
-        console.log(handleLeads[id]);
+        Leads.update(
+          { id: id },
+          { $set: { autoFollowed: new Date() } }
+        );
+        // Leads.findOne({id: id}).autofollowed = new Date();
         resolve(data);
       } else {
         console.log(error);
@@ -167,9 +157,23 @@ function follow(id) {
     });
   });
   prom.then((res) => {
-
-    console.log('followed new user');
+    console.log('followed ' + Leads.findOne({ id: id }).name);
   });
+};
+
+function follow200(count) {
+  // TODO: use lower count for tesing vs. prod
+  // if(count === 200) {
+  if(count === 2) {
+    // console.log('followed 200 leads');
+    console.log('followed 2 leads, done for the day');
+    return;
+  } else {
+    // follow random lead
+    follow(randomDocID(Leads));
+    count++;
+    follow200(count);
+  }
 };
 
 function unfollow(id) {
@@ -193,29 +197,27 @@ function unfollow(id) {
 function unfollowAllStale() {
 };
 
-function randomKey(obj) {
+// returns id of randomly chosen doc
+function randomDocID(coll) {
+  // console.log(coll);
+  const list = coll.find().fetch();
+  console.log(list);
+  const len  = list.length;
+  const choice = Math.floor(Math.random() * len);
   // get array of keys
-  const keys   = Object.keys(obj);
+  // const keys   = Object.keys(coll);
   // choose random key
-  const choice = Math.floor(Math.random() * keys.length);
-  return keys[choice];
+  // const choice = Math.floor(Math.random() * keys.length);
+  return list[choice].id;
 };
 
-function follow200(count) {
-  // TODO: use lower count for tesing vs. prod
-  // if(count === 200) {
-  if(count === 2) {
-    console.log('followed 200 leads');
-    return;
-  } else {
-    // follow random lead
-    follow(randomKey(handleLeads));
-    count++;
-    follow200(count);
-  }
-};
+function leadsCollection() {
+  return Leads.find().fetch();
+}
 
-// console.log(Object.keys(handleLeads).length);
+
+
+// console.log(leadsCollection().length);
 
 
 
