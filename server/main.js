@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import '../imports/api/leads.js';
+import { Leads } from '../imports/api/leads.js';
 
 Meteor.startup(() => {
   // code to run on server at startup
@@ -35,7 +36,7 @@ function trimCurrentFollowers() {
 
 function getLeadPage(cur, index) {
   if(index === secrets.targets.length) {
-    console.log(handleLeads);
+    // console.log(handleLeads);
     console.log(Object.keys(handleLeads).length);
     const getAOF = new Promise((resolve, reject) => {
       const params = { screen_name: secrets.user };
@@ -81,13 +82,21 @@ function getLeadPage(cur, index) {
       };
       console.log('starting... ');
       console.log(Object.keys(handleLeads).length);
-      setTimeout(() => {
-        client.get('followers/list', params, function(error, data, response) {
+      Meteor.setTimeout(() => {
+        client.get('followers/list', params, Meteor.bindEnvironment((error, data, response) => {
           if (!error) {
             data.users.forEach((user) => {
-              // TODO: store subset of user object
-              // handleLeads[user.id] = user;
-              
+              if(!Leads.find( { id: user.id } ).fetch().length) {
+                Leads.insert({
+                  name: user.name,
+                  createdAt: new Date(), // current time
+                  id: user.id,
+                  description: user.description,
+                  protected: user.protected,
+                  profile_image_url: user.profile_image_url,
+                });
+              }
+              // TODO: deprecate storage in handleLeads
               handleLeads[user.id] = {
                 id: user.id,
                 name: user.name,
@@ -100,8 +109,8 @@ function getLeadPage(cur, index) {
           } else {
             console.log(error);
           }
-        });
-        // production timeout      
+        }));
+      // production timeout      
       // }, 70000);
       // testing timeout
       }, 7);

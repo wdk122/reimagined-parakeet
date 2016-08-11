@@ -6,7 +6,7 @@ import './body.html';
  
 Template.body.helpers({
   leads() {
-    return Leads.find({});
+    return Leads.find({}, { sort: { createdAt: -1 } });
   },
 });
 
