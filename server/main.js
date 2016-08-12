@@ -30,41 +30,7 @@ getLeadPage(-1, 0);
 
 
 function getLeadPage(cur, index) {
-  if(index === secrets.targets.length) {
-    const getAOF = new Promise((resolve, reject) => {
-      const params = { screen_name: secrets.user };
-      client.get('followers/ids', params, function(error, data, response) {
-        if (!error) {
-          data.ids.forEach((id) => {
-            appOwnerFollowers[id] = id;
-          });
-        } else {
-          console.log(error);
-        }
-        resolve(appOwnerFollowers);
-      });
-    });
-    getAOF.then((res) => {
-      console.log('===================');
-      console.log('app owner followers');
-      console.log(Object.keys(appOwnerFollowers).length);
-
-      console.log('leads');
-      console.log(leadsCollection().length);
-
-      trimCurrentFollowers();
-      console.log('after removing app owner followers');
-      console.log(leadsCollection().length);
-
-      trimProtectedFeeds();
-      console.log('after removing handles w/ protected feeds');
-      console.log(leadsCollection().length);
-
-      trimMysteryEggs();
-      console.log('after removing eggs with no profile text');
-      console.log(leadsCollection().length);      
-    });
-  } else {
+  if(index < secrets.targets.length) {
     const prom = new Promise((resolve, reject) => {
       const params = { 
         screen_name: secrets.targets[index],
@@ -111,6 +77,40 @@ function getLeadPage(cur, index) {
         getLeadPage(-1, index);
       }
     })
+  } else {
+    const getAOF = new Promise((resolve, reject) => {
+      const params = { screen_name: secrets.user };
+      client.get('followers/ids', params, function(error, data, response) {
+        if (!error) {
+          data.ids.forEach((id) => {
+            appOwnerFollowers[id] = id;
+          });
+        } else {
+          console.log(error);
+        }
+        resolve(appOwnerFollowers);
+      });
+    });
+    getAOF.then((res) => {
+      console.log('===================');
+      console.log('app owner followers');
+      console.log(Object.keys(appOwnerFollowers).length);
+
+      console.log('leads');
+      console.log(leadsCollection().length);
+
+      trimCurrentFollowers();
+      console.log('after removing app owner followers');
+      console.log(leadsCollection().length);
+
+      trimProtectedFeeds();
+      console.log('after removing handles w/ protected feeds');
+      console.log(leadsCollection().length);
+
+      trimMysteryEggs();
+      console.log('after removing eggs with no profile text');
+      console.log(leadsCollection().length);      
+    });
   }
 };
 
