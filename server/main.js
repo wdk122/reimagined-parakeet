@@ -54,6 +54,7 @@ function getLeadPage(cur, index) {
                   description: user.description,
                   protected: user.protected,
                   profile_image_url: user.profile_image_url,
+                  followable: true,
                 });
               }
             });
@@ -99,19 +100,20 @@ function getLeadPage(cur, index) {
       console.log(Object.keys(appOwnerFollowers).length);
 
       console.log('leads');
-      console.log(leadsCollection().length);
+      console.log(Leads.find({ followable: true }).fetch().length);
 
       trimCurrentFollowers();
       console.log('after removing app owner followers');
-      console.log(leadsCollection().length);
+      console.log(Leads.find({ followable: true }).fetch().length);
 
       trimProtectedFeeds();
       console.log('after removing handles w/ protected feeds');
-      console.log(leadsCollection().length);
+      console.log(Leads.find({ followable: true }).fetch().length);
 
       trimMysteryEggs();
       console.log('after removing eggs with no profile text');
-      console.log(leadsCollection().length);
+      console.log(Leads.find({ followable: true }).fetch().length);
+      
       // follow200(0);
       follow(randomDocID(Leads), 0);
     });
@@ -121,20 +123,30 @@ function getLeadPage(cur, index) {
 function trimCurrentFollowers() {
   for (let k in appOwnerFollowers) {
     k = ~~k;
-    Leads.remove( { id: k } );
+    Leads.update(
+      { id: k },
+      { $set: { followable: false } }
+    );
   }
 };
 
 function trimProtectedFeeds() {
-  Leads.remove( { protected: true } );
+  Leads.update(
+    { protected: true },
+    { $set: { followable: false } },
+    { multi: true }
+  );
 };
 
 function trimMysteryEggs() {
-  leadsCollection().forEach((lead) => {
+  Leads.find().fetch().forEach((lead) => {
     if(!lead.description) {
       let foo = lead.profile_image_url.split('/')[4];
       if(foo === 'default_profile_images') {
-        Leads.remove( { id: lead.id } );
+        Leads.update(
+          { id: lead.id },
+          { $set: { followable: false } }
+        );
       };
     };
   })
@@ -172,7 +184,6 @@ function follow(id, count) {
     // console.log('followed 200 leads');
     console.log('followed 2 leads, done for the day');
     // TODO: invoke unfollow here
-    return;
   }
 }
 
@@ -208,6 +219,33 @@ function unfollow(id) {
 
 function unfollowAllStale() {
 };
+
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+
 
 // returns id of randomly chosen doc
 function randomDocID(coll) {
