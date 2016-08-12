@@ -112,7 +112,8 @@ function getLeadPage(cur, index) {
       trimMysteryEggs();
       console.log('after removing eggs with no profile text');
       console.log(leadsCollection().length);
-      follow200(0);
+      // follow200(0);
+      follow(randomDocID(Leads), 0);
     });
   }
 };
@@ -139,48 +140,53 @@ function trimMysteryEggs() {
   })
 };
 
-function follow(id) {
-  const prom = new Promise((resolve, reject) => {
-    const params = {
-      user_id: id,
-      follow: true
-    };
-    client.post('friendships/create', params, Meteor.bindEnvironment((error, data, resp) => {
-      if (!error) {
-        // TODO: assign todays date to autofollowed
-        Leads.update(
-          { id: id },
-          { $set: { autoFollowed: new Date() } }
-        );
-        // Leads.findOne({id: id}).autofollowed = new Date();
-        resolve(data);
-      } else {
-        console.log(error);
-      }
-    }));
-  });
-  prom.then((res) => {
-    console.log('followed ' + Leads.findOne({ id: id }).name);
-  });
-};
-
-function follow200(count) {
-  // TODO: reroll if already following target
-  // TODO: use lower count for tesing vs. prod
-  // if(count === 200) {
-  if(count === 2) {
+// follow(randomDocID(Leads), 0);
+function follow(id, count) {
+  // if(count < 200) {
+  if(count < 2) {
+    const prom = new Promise((resolve, reject) => {
+      const params = {
+        user_id: id,
+        follow: true
+      };
+      client.post('friendships/create', 
+                  params, 
+                  Meteor.bindEnvironment((error, data, resp) => {
+        if (!error) {
+          Leads.update(
+            { id: id },
+            { $set: { autoFollowed: new Date() } }
+          );
+          resolve(count);
+        } else {
+          console.log(error);
+        }
+      }));
+    });
+    prom.then((res) => {
+      console.log('followed ' + Leads.findOne({ id: id }).name);
+      count++;
+      follow(randomDocID(Leads), count);
+    });
+  } else {
     // console.log('followed 200 leads');
     console.log('followed 2 leads, done for the day');
+    // TODO: invoke unfollow here
     return;
-  } else {
-    // follow random lead
-    const randID = randomDocID(Leads);
-    follow(randID);
-    // console.log('followed ' + Leads.findOne({ id: randID }));
-    count++;
-    follow200(count);
   }
-};
+}
+
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
 
 function unfollow(id) {
   const prom = new Promise((resolve, reject) => {
