@@ -25,12 +25,12 @@ const followedToday     = {};
 // three days in milliseconds
 // TODO: toggle between testing and prod
 // const gracePeriod       = 259200000;
-const gracePeriod       = 0;
+const gracePeriod       = 60000;
 
 // recursively gets and filters all the leads
 getLeadPage(-1, 0);
 // TODO: make sure getLeadPage completes before follow200 starts
-// follow200(0);
+// follow200(0); 
 
 
 function getLeadPage(cur, index) {
@@ -57,7 +57,8 @@ function getLeadPage(cur, index) {
                   protected: user.protected,
                   profile_image_url: user.profile_image_url.split('/')[4],
                   followable: true,
-                  followingOwner: false
+                  followingOwner: false,
+                  unfollowed: false
                 });
               }
             });
@@ -181,7 +182,7 @@ function follow(id, count) {
             Leads.update(
               { id: id },
               { $set: { 
-                  autoFollowed: new Date(),
+                  autoFollowed: new Date().valueOf(),
                   followable:   false
               } }
             );
@@ -191,6 +192,7 @@ function follow(id, count) {
           }
         }));
       // TODO: use 1 min timeout in prod
+      // }, 70000)
       }, 5000)
     });
     prom.then((res) => {
@@ -201,8 +203,12 @@ function follow(id, count) {
   } else {
     // console.log('followed 200 leads');
     console.log('followed 2 leads, now starting the unfollow process...');
+    console.log(Leads.find(
+      { autoFollowed: { $lt: new Date().valueOf() - 2000 } }
+    ).fetch());
+
     // TODO: invoke unfollow here
-    // unfollow();
+    unfollow();  
   }
 }
 
@@ -210,7 +216,7 @@ function follow(id, count) {
 // 
 // 
 // 
-// 
+// .find({ autoFollowed: { $lt: new Date() } })
 // 
 // 
 // 
@@ -221,14 +227,28 @@ function follow(id, count) {
 
 // unfollows autoFollowed users that
 // have not followed back after three days
-// TODO: remove id as a required parameter
-// TODO: add gracePeriod as parameter
 // TODO: add unFollowed: true to disgraced leads
-// function unfollow(gracePeriod) {
+function unfollow() {
+  const deadLeads = Leads.find(
+    { 
+      $and: [
+        { autoFollowed: { $lte: new Date().valueOf() - gracePeriod } },
+        { followingOwner: false },
+        { unfollowed: false }
+      ] 
+    }
+  ).fetch();
+  console.log('autoFollowed handles to unfollow:');
+  deadLeads.forEach((lead) => {
+    console.log(lead.handle);
+    // TODO: destroy friendship here
+  });
+  
+}
+
 //   Leads.find({}).fetch().forEach((args) => {
 //     stuff
 //   })
-
 //   const prom = new Promise((resolve, reject) => {
 //     // TODO: iterate over all autoFollowed
 //     const params = { user_id: id };
