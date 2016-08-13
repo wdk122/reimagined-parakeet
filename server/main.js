@@ -23,12 +23,14 @@ const client = new Twitter({
 const appOwnerFollowers = {};
 const followedToday     = {};
 // three days in milliseconds
-const threeDays         = 259200000;
+// TODO: toggle between testing and prod
+// const gracePeriod       = 259200000;
+const gracePeriod       = 0;
 
 // recursively gets and filters all the leads
 getLeadPage(-1, 0);
 // TODO: make sure getLeadPage completes before follow200 starts
-// follow200(0);
+// follow200(0); 
 
 
 function getLeadPage(cur, index) {
@@ -49,12 +51,13 @@ function getLeadPage(cur, index) {
               if(!Leads.find( { id: user.id } ).fetch().length) {
                 Leads.insert({
                   name: user.name,
-                  // createdAt: new Date(), // current time
+                  handle: user.screen_name,
                   id: user.id,
                   description: user.description,
                   protected: user.protected,
-                  profile_image_url: user.profile_image_url,
+                  profile_image_url: user.profile_image_url.split('/')[4],
                   followable: true,
+                  followingOwner: false
                 });
               }
             });
@@ -83,27 +86,36 @@ function getLeadPage(cur, index) {
   } else {
     const getAOF = new Promise((resolve, reject) => {
       const params = { screen_name: secrets.user };
-      client.get('followers/ids', params, function(error, data, response) {
+      client.get('followers/ids', 
+                 params, 
+                 Meteor.bindEnvironment((error, data, response) => {
         if (!error) {
           data.ids.forEach((id) => {
             appOwnerFollowers[id] = id;
+            Leads.update(
+              { id: id },
+              { $set: { 
+                followingOwner: true,
+                followable:     false,
+              } },
+            );
           });
         } else {
           console.log(error);
         }
         resolve(appOwnerFollowers);
-      });
+      }));
     });
     getAOF.then((res) => {
       console.log('===================');
       console.log('app owner followers');
       console.log(Object.keys(appOwnerFollowers).length);
 
-      console.log('leads');
-      console.log(Leads.find({ followable: true }).fetch().length);
+      // console.log('leads');
+      // console.log(Leads.find({ followable: true }).fetch().length);
 
       trimCurrentFollowers();
-      console.log('after removing app owner followers');
+      console.log('leads after removing app owner followers');
       console.log(Leads.find({ followable: true }).fetch().length);
 
       trimProtectedFeeds();
@@ -115,7 +127,7 @@ function getLeadPage(cur, index) {
       console.log(Leads.find({ followable: true }).fetch().length);
       
       // follow200(0);
-      follow(randomDocID(Leads), 0);
+      follow(randomFollowableID(Leads), 0);
     });
   }
 };
@@ -141,7 +153,7 @@ function trimProtectedFeeds() {
 function trimMysteryEggs() {
   Leads.find().fetch().forEach((lead) => {
     if(!lead.description) {
-      let foo = lead.profile_image_url.split('/')[4];
+      let foo = lead.profile_image_url;
       if(foo === 'default_profile_images') {
         Leads.update(
           { id: lead.id },
@@ -152,7 +164,8 @@ function trimMysteryEggs() {
   })
 };
 
-// follow(randomDocID(Leads), 0);
+// follow(randomFollowableID(Leads), 0);
+// TODO: disallow following of leads that are following owner
 function follow(id, count) {
   // if(count < 200) {
   if(count < 2) {
@@ -167,7 +180,10 @@ function follow(id, count) {
         if (!error) {
           Leads.update(
             { id: id },
-            { $set: { autoFollowed: new Date() } }
+            { $set: { 
+                autoFollowed: new Date(),
+                followable:   false
+            } }
           );
           resolve(count);
         } else {
@@ -178,12 +194,13 @@ function follow(id, count) {
     prom.then((res) => {
       console.log('followed ' + Leads.findOne({ id: id }).name);
       count++;
-      follow(randomDocID(Leads), count);
+      follow(randomFollowableID(Leads), count);
     });
   } else {
     // console.log('followed 200 leads');
-    console.log('followed 2 leads, done for the day');
+    console.log('followed 2 leads, now starting the unfollow process...');
     // TODO: invoke unfollow here
+    // unfollow();
   }
 }
 
@@ -199,58 +216,66 @@ function follow(id, count) {
 // 
 // 
 
-function unfollow(id) {
-  const prom = new Promise((resolve, reject) => {
-    const params = {
-      user_id: id,
-    };
-    client.post('friendships/destroy', params, function(error, data, resp) {
-      if (!error) {
-        resolve(data);
-      } else {
-        console.log(error);
-      }
-    });
-  });
-  prom.then((res) => {
-    console.log('unfollowed user');
-  });
-};
 
-function unfollowAllStale() {
-};
+// unfollows autoFollowed users that
+// have not followed back after three days
+// TODO: remove id as a required parameter
+// TODO: add gracePeriod as parameter
+// TODO: add unFollowed: true to disgraced leads
+// function unfollow(gracePeriod) {
+//   Leads.find({}).fetch().forEach((args) => {
+//     stuff
+//   })
 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
+//   const prom = new Promise((resolve, reject) => {
+//     // TODO: iterate over all autoFollowed
+//     const params = { user_id: id };
+//     client.post('friendships/destroy', params, function(error, data, resp) {
+//       if (!error) {
+//         resolve(data);
+//       } else {
+//         console.log(error);
+//       }
+//     });
+//   });
+//   prom.then((res) => {
+//     console.log('unfollowed user');
+//   });
 
 
-// returns id of randomly chosen doc
-function randomDocID(coll) {
+// };
+
+
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+// 
+
+
+// returns id of randomly chosen followable lead
+function randomFollowableID(coll) {
   // console.log(coll);
-  const list = coll.find().fetch();
+  const list = coll.find({followable: true}).fetch();
   // console.log(list);
   const len  = list.length;
   const choice = Math.floor(Math.random() * len);
