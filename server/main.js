@@ -30,7 +30,7 @@ const gracePeriod       = 0;
 // recursively gets and filters all the leads
 getLeadPage(-1, 0);
 // TODO: make sure getLeadPage completes before follow200 starts
-// follow200(0); 
+// follow200(0);
 
 
 function getLeadPage(cur, index) {
@@ -165,7 +165,6 @@ function trimMysteryEggs() {
 };
 
 // follow(randomFollowableID(Leads), 0);
-// TODO: disallow following of leads that are following owner
 function follow(id, count) {
   // if(count < 200) {
   if(count < 2) {
@@ -174,22 +173,25 @@ function follow(id, count) {
         user_id: id,
         follow: true
       };
-      client.post('friendships/create', 
-                  params, 
-                  Meteor.bindEnvironment((error, data, resp) => {
-        if (!error) {
-          Leads.update(
-            { id: id },
-            { $set: { 
-                autoFollowed: new Date(),
-                followable:   false
-            } }
-          );
-          resolve(count);
-        } else {
-          console.log(error);
-        }
-      }));
+      Meteor.setTimeout(() => {
+        client.post('friendships/create', 
+                    params, 
+                    Meteor.bindEnvironment((error, data, resp) => {
+          if (!error) {
+            Leads.update(
+              { id: id },
+              { $set: { 
+                  autoFollowed: new Date(),
+                  followable:   false
+              } }
+            );
+            resolve(count);
+          } else {
+            console.log(error);
+          }
+        }));
+      // TODO: use 1 min timeout in prod
+      }, 5000)
     });
     prom.then((res) => {
       console.log('followed ' + Leads.findOne({ id: id }).name);
