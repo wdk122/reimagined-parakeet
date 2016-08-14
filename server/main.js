@@ -24,8 +24,9 @@ const appOwnerFollowers = {};
 const followedToday     = {};
 // three days in milliseconds
 // TODO: toggle between testing and prod
-// const gracePeriod       = 259200000;
-const gracePeriod       = 60000;
+// const gracePeriod       = 259200000; 
+// const gracePeriod       = 60000;
+const gracePeriod       = 0;
 
 // recursively gets and filters all the leads
 getLeadPage(-1, 0);
@@ -43,7 +44,7 @@ function getLeadPage(cur, index) {
         skip_status: true,
         include_user_entities: false
       };
-      console.log('starting... ');
+      // console.log('starting... ');
       Meteor.setTimeout(() => {
         client.get('followers/list', params, Meteor.bindEnvironment((error, data, response) => {
           if (!error) {
@@ -186,9 +187,15 @@ function follow(id, count) {
                   followable:   false
               } }
             );
-            resolve(count);
+            resolve('ok');
+          // TODO: handle error 108 (cannot find specified user)
+          // handles case where Twitter can't find a lead
+          } else if(error[0].code === 108) {
+            console.log(error[0].message);
+            resolve(error[0].code);
           } else {
             console.log(error);
+            // console.log(error[0].message);
           }
         }));
       // TODO: use 1 min timeout in prod
@@ -196,38 +203,34 @@ function follow(id, count) {
       }, 5000)
     });
     prom.then((res) => {
-      console.log('followed ' + Leads.findOne({ id: id }).name);
-      count++;
-      follow(randomFollowableID(Leads), count);
+      if(res === 'ok') {
+        console.log('followed ' + Leads.findOne({ id: id }).handle);
+        count++;
+        follow(randomFollowableID(Leads), count);
+      } else if(res === 108) {
+        console.log('resolving promise after code 108');
+        follow(randomFollowableID(Leads), count);
+      } else {
+        console.log('follow promise unresolved.');
+      }
     });
   } else {
     // console.log('followed 200 leads');
     console.log('followed 2 leads, now starting the unfollow process...');
-    console.log(Leads.find(
-      { autoFollowed: { $lt: new Date().valueOf() - 2000 } }
-    ).fetch());
+    // console.log(Leads.find(
+    //   { autoFollowed: { $lt: new Date().valueOf() - 2000 } }
+    // ).fetch());
 
     // TODO: invoke unfollow here
     unfollow();  
   }
 }
 
-// 
-// 
-// 
-// 
-// .find({ autoFollowed: { $lt: new Date() } })
-// 
-// 
-// 
-// 
-// 
-// 
-
 
 // unfollows autoFollowed users that
 // have not followed back after three days
-// TODO: add unFollowed: true to disgraced leads
+// and have not yet been unfollowed
+// TODO: add unfollowed: true to disgraced leads 
 function unfollow() {
   const deadLeads = Leads.find(
     { 
@@ -238,93 +241,37 @@ function unfollow() {
       ] 
     }
   ).fetch();
-  console.log('autoFollowed handles to unfollow:');
+  // console.log('autoFollowed handles to unfollow:');
   deadLeads.forEach((lead) => {
     console.log(lead.handle);
     // TODO: destroy friendship here
+    let params = { user_id: lead.id }
+    let cb = Meteor.bindEnvironment((error, data, resp) => {
+      if (!error) {
+        console.log('unfollowed ' + lead.handle);
+        // TODO: update Leads collection parameters to reflect the unfollow
+        Leads.update(
+          { handle: lead.handle },
+          { $set: { unfollowed: true } }
+        );
+      } else {
+        console.log(error);
+      }
+    })
+    client.post('friendships/destroy', params, cb);
   });
-  
+  // TODO: remove the code below: it is just for testing purposes
+  // follow(561561561561565166556, 1);
 }
-
-//   Leads.find({}).fetch().forEach((args) => {
-//     stuff
-//   })
-//   const prom = new Promise((resolve, reject) => {
-//     // TODO: iterate over all autoFollowed
-//     const params = { user_id: id };
-//     client.post('friendships/destroy', params, function(error, data, resp) {
-//       if (!error) {
-//         resolve(data);
-//       } else {
-//         console.log(error);
-//       }
-//     });
-//   });
-//   prom.then((res) => {
-//     console.log('unfollowed user');
-//   });
-
-
-// };
-
-
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
 
 
 // returns id of randomly chosen followable lead
 function randomFollowableID(coll) {
-  // console.log(coll);
   const list = coll.find({followable: true}).fetch();
-  // console.log(list);
   const len  = list.length;
   const choice = Math.floor(Math.random() * len);
-  // get array of keys
-  // const keys   = Object.keys(coll);
-  // choose random key
-  // const choice = Math.floor(Math.random() * keys.length);
   return list[choice].id;
 };
-
-function leadsCollection() {
-  return Leads.find().fetch();
-}
-
-
-
-// console.log(leadsCollection().length);
-
-
-
-
-
-
-
-
-
-
 
 
 
