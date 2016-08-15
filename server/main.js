@@ -8,6 +8,10 @@ Meteor.startup(() => {
 
 // this script gets leads that follow influencers,
 // one influencer at a time
+// test vs. prod: change the following:
+  // secrets.js params,
+  // getLeadPage timeout,
+  // gracePeriod,
 // ====================================================
 
 'use strict';
@@ -21,18 +25,29 @@ const client = new Twitter({
 });
 
 const appOwnerFollowers = {};
-const followedToday     = {};
+
+// TODO: put all test vs prod params here
+// TEST PARAMS: 
+const gracePeriod    = 0; 
+// const gracePeriod    = 60000;
+const getLeadTimeout = 7;
+const followTimeout  = 5000;
+const followCount    = 2;
+// when testing run script every 3 minutes
+const scriptInterval = 180000;
+
+// PROD PARAMS:
 // three days in milliseconds
-// TODO: toggle between testing and prod
-// const gracePeriod       = 259200000; 
-// const gracePeriod       = 60000;
-const gracePeriod       = 0;
+// const gracePeriod    = 259200000; 
+// const getLeadTimeout = 70000;
+// const followTimeout  = 70000;
+// const followCount    = 200;
 
 // recursively gets and filters all the leads
-getLeadPage(-1, 0);
-// TODO: make sure getLeadPage completes before follow200 starts
-// follow200(0); 
-
+// getLeadPage(-1, 0);
+Meteor.setInterval(() => {
+  getLeadPage(-1, 0);
+}, scriptInterval);
 
 function getLeadPage(cur, index) {
   if(index < secrets.targets.length) {
@@ -68,10 +83,7 @@ function getLeadPage(cur, index) {
             console.log(error);
           }
         }));
-      // production timeout      
-      // }, 70000);
-      // testing timeout
-      }, 7);
+      }, getLeadTimeout);
     });
     prom.then((res) => {
       // if nonzero cursor
@@ -128,7 +140,6 @@ function getLeadPage(cur, index) {
       console.log('after removing eggs with no profile text');
       console.log(Leads.find({ followable: true }).fetch().length);
       
-      // follow200(0);
       follow(randomFollowableID(Leads), 0);
     });
   }
@@ -168,8 +179,7 @@ function trimMysteryEggs() {
 
 // follow(randomFollowableID(Leads), 0);
 function follow(id, count) {
-  // if(count < 200) {
-  if(count < 2) {
+  if(count < followCount) {
     const prom = new Promise((resolve, reject) => {
       const params = {
         user_id: id,
@@ -188,7 +198,6 @@ function follow(id, count) {
               } }
             );
             resolve('ok');
-          // TODO: handle error 108 (cannot find specified user)
           // handles case where Twitter can't find a lead
           } else if(error[0].code === 108) {
             console.log(error[0].message);
@@ -198,9 +207,7 @@ function follow(id, count) {
             // console.log(error[0].message);
           }
         }));
-      // TODO: use 1 min timeout in prod
-      // }, 70000)
-      }, 5000)
+      }, followTimeout)
     });
     prom.then((res) => {
       if(res === 'ok') {
@@ -221,7 +228,6 @@ function follow(id, count) {
     //   { autoFollowed: { $lt: new Date().valueOf() - 2000 } }
     // ).fetch());
 
-    // TODO: invoke unfollow here
     unfollow();  
   }
 }
@@ -230,7 +236,6 @@ function follow(id, count) {
 // unfollows autoFollowed users that
 // have not followed back after three days
 // and have not yet been unfollowed
-// TODO: add unfollowed: true to disgraced leads 
 function unfollow() {
   const deadLeads = Leads.find(
     { 
@@ -244,12 +249,10 @@ function unfollow() {
   // console.log('autoFollowed handles to unfollow:');
   deadLeads.forEach((lead) => {
     console.log(lead.handle);
-    // TODO: destroy friendship here
     let params = { user_id: lead.id }
     let cb = Meteor.bindEnvironment((error, data, resp) => {
       if (!error) {
         console.log('unfollowed ' + lead.handle);
-        // TODO: update Leads collection parameters to reflect the unfollow
         Leads.update(
           { handle: lead.handle },
           { $set: { unfollowed: true } }
@@ -260,7 +263,7 @@ function unfollow() {
     })
     client.post('friendships/destroy', params, cb);
   });
-  // TODO: remove the code below: it is just for testing purposes
+  // code below is for testing purposes only
   // follow(561561561561565166556, 1);
 }
 
