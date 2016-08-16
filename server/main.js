@@ -27,24 +27,39 @@ const client = new Twitter({
 const appOwnerFollowers = {};
 
 // TODO: put all test vs prod params here
-// TEST PARAMS: 
-const gracePeriod    = 0; 
-// const gracePeriod    = 60000;
-const getLeadTimeout = 7;
-const followTimeout  = 5000;
-const followCount    = 2;
-// when testing run script every 3 minutes
-const scriptInterval = 180000;
+// ====================================================
+// SHORT TEST PARAMS: 
+// const gracePeriod    = 0; 
+// const getLeadTimeout = 7;
+// const followTimeout  = 5000;
+// const followCount    = 2;
+// const scriptInterval = 180000;
 
+// ====================================================
+// LONG TEST PARAMS:
+// run once every 20 mins
+const gracePeriod    = 0; 
+const getLeadTimeout = 70000;
+const followTimeout  = 70000;
+const followCount    = 4;
+const scriptInterval = 1200000;
+
+// ====================================================
 // PROD PARAMS:
-// three days in milliseconds
+// grace period is three days
+// run script once a day
 // const gracePeriod    = 259200000; 
 // const getLeadTimeout = 70000;
 // const followTimeout  = 70000;
 // const followCount    = 200;
+// const scriptInterval = 86400000;
+// ====================================================
+
 
 // recursively gets and filters all the leads
-// getLeadPage(-1, 0);
+// TODO: test vs. prod:
+  // run script once before setInterval in test, not in prod
+getLeadPage(-1, 0);
 Meteor.setInterval(() => {
   getLeadPage(-1, 0);
 }, scriptInterval);
