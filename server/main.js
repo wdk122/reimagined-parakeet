@@ -223,7 +223,7 @@ function follow(id, count) {
             // console.log(error[0].message);
           }
         }));
-      }, followTimeout)
+      }, followTimeout * (Math.random() + 1))
     });
     prom.then((res) => {
       if(res === 'ok') {
@@ -286,7 +286,7 @@ function unfollow() {
       () => {
         client.post('friendships/destroy', params, cb)
       },
-      followTimeout * (index + 1)
+      followTimeout * (index + 1) * (Math.random() + 1)
     );
   });
 
