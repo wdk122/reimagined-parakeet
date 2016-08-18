@@ -28,21 +28,22 @@ const appOwnerFollowers = {};
 
 // TODO: put all test vs prod params here
 // ====================================================
-// SHORT TEST PARAMS: 
-// const gracePeriod    = 0; 
-// const getLeadTimeout = 7;
-// const followTimeout  = 5000;
-// const followCount    = 2;
-// const scriptInterval = 180000;
+// SHORT TEST PARAMS:
+// 3 min scriptInterval
+const gracePeriod    = 0; 
+const getLeadTimeout = 7;
+const followTimeout  = 5000;
+const followCount    = 2;
+const scriptInterval = 180000;
 
 // ====================================================
 // LONG TEST PARAMS:
 // run once every 20 mins
-const gracePeriod    = 0; 
-const getLeadTimeout = 70000;
-const followTimeout  = 70000;
-const followCount    = 4;
-const scriptInterval = 1200000;
+// const gracePeriod    = 0; 
+// const getLeadTimeout = 70000;
+// const followTimeout  = 70000;
+// const followCount    = 4;
+// const scriptInterval = 1200000;
 
 // ====================================================
 // PROD PARAMS:
@@ -261,8 +262,13 @@ function unfollow() {
       ] 
     }
   ).fetch();
-  // console.log('autoFollowed handles to unfollow:');
-  deadLeads.forEach((lead) => {
+  // deadLeads is array of dead lead objects
+  
+  /*
+  unfollow one at a time, one every ~70s
+  */
+
+  deadLeads.forEach((lead, index) => {
     console.log(lead.handle);
     let params = { user_id: lead.id }
     let cb = Meteor.bindEnvironment((error, data, resp) => {
@@ -276,10 +282,17 @@ function unfollow() {
         console.log(error);
       }
     })
-    client.post('friendships/destroy', params, cb);
+    Meteor.setTimeout(
+      () => {
+        client.post('friendships/destroy', params, cb)
+      },
+      followTimeout * (index + 1)
+    );
   });
-  // code below is for testing purposes only
-  // follow(561561561561565166556, 1);
+
+
+
+
 }
 
 
