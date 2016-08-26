@@ -29,11 +29,11 @@ const appOwnerFollowers = {};
 // ====================================================
 // SHORT TEST PARAMS:
 // 3 min scriptInterval
-// const gracePeriod    = 0; 
-// const getLeadTimeout = 7;
-// const followTimeout  = 5000;
-// const followCount    = 2;
-// const scriptInterval = 180000;
+const gracePeriod    = 0; 
+const getLeadTimeout = 7;
+const followTimeout  = 5000;
+const followCount    = 2;
+const scriptInterval = 180000;
 
 // ====================================================
 // LONG TEST PARAMS:
@@ -45,20 +45,30 @@ const appOwnerFollowers = {};
 // const scriptInterval = 1200000;
 
 // ====================================================
+// LONGER TERM TEST PARAMS:
+// prod params with no grace period
+// const gracePeriod    = 0; 
+// const getLeadTimeout = 7;
+// const followTimeout  = 70000;
+// const followCount    = 0;
+// const followCount    = 150 + Math.ceil(Math.random() * 50);
+// const scriptInterval = 86400000;
+
+// ====================================================
 // PROD PARAMS:
 // grace period is three days
 // run script once a day
-// TODO: add randomness to followCount
-const gracePeriod    = 259200000; 
-const getLeadTimeout = 70000;
-const followTimeout  = 70000;
-const followCount    = 150 + Math.ceil(Math.random() * 50);
-const scriptInterval = 86400000;
+// const gracePeriod    = 259200000; 
+// const getLeadTimeout = 70000;
+// const followTimeout  = 70000;
+// const followCount    = 150 + Math.ceil(Math.random() * 50);
+// const scriptInterval = 86400000;
+
 // ====================================================
 
 
 // recursively gets and filters all the leads
-
+console.log('follow count: ' + followCount);
 getLeadPage(-1, 0);
 Meteor.setInterval(() => {
   getLeadPage(-1, 0);
