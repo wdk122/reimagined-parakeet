@@ -253,7 +253,7 @@ function follow(id, count) {
     //   { autoFollowed: { $lt: new Date().valueOf() - 2000 } }
     // ).fetch());
 
-    unfollow();  
+    unfollow(-1, []);  
   }
 }
 
@@ -261,47 +261,63 @@ function follow(id, count) {
 // unfollows autoFollowed users that
 // have not followed back after three days
 // and have not yet been unfollowed
-function unfollow() {
-  const deadLeads = Leads.find(
-    { 
-      $and: [
-        { autoFollowed: { $lte: new Date().valueOf() - gracePeriod } },
-        { followingOwner: false },
-        { unfollowed: false }
-      ] 
-    }
-  ).fetch();
-  // deadLeads is array of dead lead objects
-  
-  /*
-  unfollow one at a time, one every ~70s
-  */
+function unfollow(index, deadLeads) {
+  if (index === -1) {
+    console.log('getting deadLeads');
+    const prom = new Promise((resolve, reject) => {
+      // resolve an array of dead lead objects
+      resolve(
+        Leads.find(
+          { 
+            $and: [
+              { autoFollowed: { $lte: new Date().valueOf() - gracePeriod } },
+              { followingOwner: false },
+              { unfollowed: false }
+            ] 
+          }
+        ).fetch()
+      );
+    });
+    prom.then((res) => {
+      unfollow(0, res);
+    });
 
-  deadLeads.forEach((lead, index) => {
-    console.log(lead.handle);
-    let params = { user_id: lead.id }
+  } else if (index < deadLeads.length) {
+    console.log('index: ' + index);
+    let timeout = followTimeout * (Math.random() + 1);
+    console.log('timeout: ' + timeout);
+    let params = { user_id: deadLeads[index].id }
     let cb = Meteor.bindEnvironment((error, data, resp) => {
       if (!error) {
-        console.log('unfollowed ' + lead.handle);
+        console.log('unfollowed ' + deadLeads[index].handle);
         Leads.update(
-          { handle: lead.handle },
+          { handle: deadLeads[index].handle },
           { $set: { unfollowed: true } }
         );
       } else {
         console.log(error);
       }
+    });
+    // =============================
+    const prom = new Promise((resolve, reject) => {
+      Meteor.setTimeout(
+        () => {
+          client.post('friendships/destroy', params, cb);
+          resolve(true);
+        },
+        timeout
+      );
+      // unfollow api action
+    });
+    prom.then((res) => {
+      // do stuff
+      unfollow(index + 1, deadLeads);
     })
-    Meteor.setTimeout(
-      () => {
-        client.post('friendships/destroy', params, cb)
-      },
-      followTimeout * (index + 1) * (Math.random() + 1)
-    );
-  });
-
-
-
-
+  } else if (index === deadLeads.length) {
+    console.log('unfollow batch finished for this round');
+  } else {
+    console.log('ERROR: index greater than deadLeads.length');
+  }
 }
 
 
