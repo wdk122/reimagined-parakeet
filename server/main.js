@@ -29,11 +29,11 @@ const appOwnerFollowers = {};
 // ====================================================
 // SHORT TEST PARAMS:
 // 3 min scriptInterval
-const gracePeriod    = 0; 
-const getLeadTimeout = 7;
-const followTimeout  = 5000;
-const followCount    = 2;
-const scriptInterval = 180000;
+// const gracePeriod    = 0; 
+// const getLeadTimeout = 7;
+// const followTimeout  = 5000;
+// const followCount    = 2;
+// const scriptInterval = 180000;
 
 // ====================================================
 // LONG TEST PARAMS:
@@ -58,11 +58,11 @@ const scriptInterval = 180000;
 // PROD PARAMS:
 // grace period is three days
 // run script once a day
-// const gracePeriod    = 259200000; 
-// const getLeadTimeout = 70000;
-// const followTimeout  = 70000;
-// const followCount    = 150 + Math.ceil(Math.random() * 50);
-// const scriptInterval = 86400000;
+const gracePeriod    = 259200000; 
+const getLeadTimeout = 70000;
+const followTimeout  = 70000;
+const followCount    = 150 + Math.ceil(Math.random() * 50);
+const scriptInterval = 86400000;
 
 // ====================================================
 
