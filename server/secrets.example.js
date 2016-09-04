@@ -1,5 +1,4 @@
-// TODO: iterate through all TODO items on page, then rename file as secrets.js
-
+// TODO: rename file as secrets.js, then iterate through all TODO items on page
 import { Meteor } from 'meteor/meteor';
 
 Meteor.startup(() => {
