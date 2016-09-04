@@ -6,14 +6,6 @@ Meteor.startup(() => {
   // code to run on server at startup
 });
 
-// this script gets leads that follow influencers,
-// one influencer at a time
-// test vs. prod: change the following:
-  // secrets.js params,
-  // getLeadPage timeout,
-  // gracePeriod,
-// ====================================================
-
 'use strict';
 const Twitter = require('twitter');
 const secrets = require('./secrets.js');
